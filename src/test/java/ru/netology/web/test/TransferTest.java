@@ -1,61 +1,77 @@
 package ru.netology.web.test;
 
-import io.restassured.RestAssured;
-import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.json.simple.JSONObject;
-import org.junit.Assert;
+import lombok.val;
+import org.apache.commons.dbutils.QueryRunner;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.netology.web.data.DataHelper;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.sql.DriverManager;
 import java.sql.SQLException;
-
-import static io.restassured.RestAssured.given;
 
 public class TransferTest {
 
-    public String postRequest() throws SQLException {
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("login", "vasya");
-        requestBody.put("password", "qwerty123");
+    public TransferTest() throws Exception {
+    }
 
-        RequestSpecification request = given();
-        request.header("Content-Type", "application/json");
-        request.body(requestBody.toString());
-        Response response = request.post("http://localhost:9999/api/auth");
-        Assertions.assertEquals(200, response.getStatusCode());
-        String verificationCode = DataHelper.getVerificationCodeForVasya();
-        return verificationCode;
+    @AfterAll
+    public static void cleanData() throws SQLException {
+        val runner = new QueryRunner();
+        val codes = "DELETE FROM auth_codes";
+        val cards = "DELETE FROM cards";
+        val users = "DELETE FROM users";
+
+        try (
+                val conn = DriverManager.getConnection(
+                        "jdbc:mysql://localhost:3306/app", "app", "pass"
+                )
+        ) {
+            runner.update(conn, codes);
+            runner.update(conn, cards);
+            runner.update(conn, users);
+        }
     }
 
     @Test
-    public void testRequest() throws Exception {
-        String verificationCode = postRequest();
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("login", "vasya");
-        requestBody.put("code", verificationCode);
-
-        RequestSpecification request = given();
-        request.header("Content-Type", "application/json");
-        request.body(requestBody.toString());
-        Response response = request.post("http://localhost:9999/api/auth/verification");
-
-        Assertions.assertEquals(200, response.getStatusCode());
-        String status = response.then().extract().path("status");
-        Assert.assertEquals(status, "ok");
-        System.out.println(response.getBody().asString());
+    public void shouldTransfer() throws Exception {
+        int amount = 1000;
+        int initialMoney = DataHelper.getCurrentBalance();
+        DataHelper.transferMoney(amount);
+        int expectedMoney = initialMoney + amount;
+        int actualMoney = DataHelper.getCurrentBalance();
+        Assertions.assertEquals(expectedMoney,actualMoney);
     }
 
+    @Test
+    public void shouldNotTransferWhenAmmountIsZero() throws Exception {
+        int amount = 0;
+        int initialMoney = DataHelper.getCurrentBalance();
+        DataHelper.transferMoney(amount);
+        int expectedMoney = initialMoney;
+        int actualMoney = DataHelper.getCurrentBalance();
+        Assertions.assertEquals(expectedMoney,actualMoney);
+    }
+
+    @Test
+    public void shouldTransferAllMoney() throws Exception {
+        int amount = DataHelper.getCurrentBalanceDonor();
+        int initialMoney = DataHelper.getCurrentBalance();
+        DataHelper.transferMoney(amount);
+        int expectedMoney = initialMoney + amount;
+        int actualMoney = DataHelper.getCurrentBalance();
+        Assertions.assertEquals(expectedMoney,actualMoney);
+    }
+
+    @Test
+    public void shouldNotTransferWhenNotEnoughMoney() throws Exception {
+        int amount = DataHelper.getCurrentBalanceDonor()+1;
+        int initialMoney = DataHelper.getCurrentBalance();
+        DataHelper.transferMoney(amount);
+        int expectedMoney = initialMoney;
+        int actualMoney = DataHelper.getCurrentBalance();
+        Assertions.assertEquals(expectedMoney,actualMoney);
+    }
 }
 
 
