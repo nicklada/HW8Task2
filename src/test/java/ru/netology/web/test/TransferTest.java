@@ -11,43 +11,45 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.json.simple.JSONObject;
 import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import ru.netology.web.data.DataHelper;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
+
+import static io.restassured.RestAssured.given;
 
 public class TransferTest {
 
-    @Test
-    public void testReq() throws Exception {
-        String payload = "data={" +
-                "\"login\": \"vasya\", " +
-                "\"password\": \"qwerty123\", " +
-                "}";
-        StringEntity entity = new StringEntity(payload);
-
-        HttpClient httpClient = HttpClientBuilder.create().build();
-        HttpPost request = new HttpPost("http://localhost:9999/api/auth");
-        request.setEntity(entity);
-
-        HttpResponse response = httpClient.execute(request);
-        System.out.println(response.getStatusLine().getStatusCode());
-        InputStream inputStream = response.getEntity().getContent();
-        String json = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-        System.out.println(json);
-    }
-
-    @Test
-    public void postRequestExampleTest() {
+    public String postRequest() throws SQLException {
         JSONObject requestBody = new JSONObject();
         requestBody.put("login", "vasya");
         requestBody.put("password", "qwerty123");
 
-        RequestSpecification request = RestAssured.given();
+        RequestSpecification request = given();
         request.header("Content-Type", "application/json");
         request.body(requestBody.toString());
         Response response = request.post("http://localhost:9999/api/auth");
+        Assertions.assertEquals(200, response.getStatusCode());
+        String verificationCode = DataHelper.getVerificationCodeForVasya();
+        return verificationCode;
+    }
+
+    @Test
+    public void testRequest() throws Exception {
+        String verificationCode = postRequest();
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("login", "vasya");
+        requestBody.put("code", verificationCode);
+
+        RequestSpecification request = given();
+        request.header("Content-Type", "application/json");
+        request.body(requestBody.toString());
+        Response response = request.post("http://localhost:9999/api/auth/verification");
+
         Assertions.assertEquals(200, response.getStatusCode());
         String status = response.then().extract().path("status");
         Assert.assertEquals(status, "ok");

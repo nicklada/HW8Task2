@@ -1,9 +1,14 @@
 package ru.netology.web.data;
 
 import lombok.Value;
+import lombok.val;
+
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class DataHelper {
-    private DataHelper() {}
+    private DataHelper() {
+    }
 
     @Value
     public static class AuthInfo {
@@ -24,21 +29,24 @@ public class DataHelper {
         private String code;
     }
 
-    public static VerificationCode getVerificationCodeFor(AuthInfo authInfo) {
-        return new VerificationCode("12345");
-    }
+    public static String getVerificationCodeForVasya() throws SQLException {
+        val verificationCode = "SELECT code FROM auth_codes WHERE created = (SELECT MAX(created) FROM auth_codes);";
 
-    @Value
-    public static class TransferInfo {
-        private String amount;
-        private String card;
-    }
-
-    public static TransferInfo getTransferInfo(String amount) {
-        return new TransferInfo(amount,"5559000000000002");
-    }
-
-    public static TransferInfo getReturnTransferInfo(TransferInfo original) {
-        return new TransferInfo(original.amount,"5559000000000001");
+        try (
+                val conn = DriverManager.getConnection(
+                        "jdbc:mysql://localhost:3306/app", "app", "pass"
+                );
+                val countStmt = conn.createStatement();
+        ) {
+            try (val rs = countStmt.executeQuery(verificationCode)) {
+                if (rs.next()) {
+                    // выборка значения по индексу столбца (нумерация с 1)
+                    val code = rs.getString("code");
+                    // TODO: использовать
+                    return code;
+                }
+            }
+        }
+        return null;
     }
 }
