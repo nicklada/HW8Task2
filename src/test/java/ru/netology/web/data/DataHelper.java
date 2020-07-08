@@ -4,6 +4,7 @@ import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import lombok.Value;
 import lombok.val;
+import org.apache.commons.dbutils.QueryRunner;
 import org.json.simple.JSONObject;
 import org.junit.jupiter.api.Assertions;
 
@@ -16,18 +17,21 @@ public class DataHelper {
     private DataHelper() {
     }
 
-    @Value
-    public static class AuthInfo {
-        private String login;
-        private String password;
-    }
+    public static void cleanData() throws SQLException {
+        val runner = new QueryRunner();
+        val codes = "DELETE FROM auth_codes";
+        val cards = "DELETE FROM cards";
+        val users = "DELETE FROM users";
 
-    public static AuthInfo getAuthInfo() {
-        return new AuthInfo("vasya", "qwerty123");
-    }
-
-    public static AuthInfo getOtherAuthInfo(AuthInfo original) {
-        return new AuthInfo("petya", "123qwerty");
+        try (
+                val conn = DriverManager.getConnection(
+                        "jdbc:mysql://localhost:3306/app", "app", "pass"
+                )
+        ) {
+            runner.update(conn, codes);
+            runner.update(conn, cards);
+            runner.update(conn, users);
+        }
     }
 
     @Value
@@ -129,8 +133,7 @@ public class DataHelper {
         return token;
     }
 
-    public static void transferMoney(int amount) throws Exception {
-        String token = tokenRequest();
+    public static void transferMoney(int amount, String token) throws Exception {
         JSONObject requestBody = new JSONObject();
         requestBody.put("from", "5559 0000 0000 0002");
         requestBody.put("to", "5559 0000 0000 0001");
@@ -138,7 +141,7 @@ public class DataHelper {
 
         RequestSpecification request = given();
         request.header("Content-Type", "application/json");
-        request.header("Authorization", "Bearer "+token);
+        request.header("Authorization", "Bearer " + token);
         request.body(requestBody.toString());
         Response response = request.post("http://localhost:9999/api/transfer");
 
