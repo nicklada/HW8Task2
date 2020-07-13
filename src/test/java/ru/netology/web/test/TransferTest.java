@@ -11,21 +11,25 @@ public class TransferTest {
 
     private static String Token;
 
+    @BeforeAll
+    public static void setUp() throws Exception {
+        String login = DataHelper.getAuthInfo().getLogin();
+        String password = DataHelper.getAuthInfo().getPassword();
+        Token = tokenRequest(login, password);
+    }
+
     @AfterAll
     public static void cleanData() throws SQLException {
         DataHelper.cleanData();
     }
 
-    @BeforeAll
-    public static void setUp() throws Exception {
-        Token = tokenRequest();
-    }
-
     @Test
     public void shouldTransfer() throws Exception {
         int amount = 1000;
+        String from = DataHelper.getDonorCardNumber().getNumber();
+        String to = DataHelper.getReceiverCardNumber().getNumber();
         int initialMoney = DataHelper.getCurrentBalance();
-        DataHelper.transferMoney(amount,Token);
+        DataHelper.transferMoney(amount, Token, from, to);
         int expectedMoney = initialMoney + amount;
         int actualMoney = DataHelper.getCurrentBalance();
         Assertions.assertEquals(expectedMoney, actualMoney);
@@ -34,8 +38,10 @@ public class TransferTest {
     @Test
     public void shouldNotTransferWhenAmmountIsZero() throws Exception {
         int amount = 0;
+        String from = DataHelper.getDonorCardNumber().getNumber();
+        String to = DataHelper.getReceiverCardNumber().getNumber();
         int initialMoney = DataHelper.getCurrentBalance();
-        DataHelper.transferMoney(amount,Token);
+        DataHelper.transferMoney(amount, Token, from, to);
         int expectedMoney = initialMoney;
         int actualMoney = DataHelper.getCurrentBalance();
         Assertions.assertEquals(expectedMoney, actualMoney);
@@ -44,8 +50,10 @@ public class TransferTest {
     @Test
     public void shouldTransferAllMoney() throws Exception {
         int amount = DataHelper.getCurrentBalanceDonor();
+        String from = DataHelper.getDonorCardNumber().getNumber();
+        String to = DataHelper.getReceiverCardNumber().getNumber();
         int initialMoney = DataHelper.getCurrentBalance();
-        DataHelper.transferMoney(amount,Token);
+        DataHelper.transferMoney(amount, Token, from, to);
         int expectedMoney = initialMoney + amount;
         int actualMoney = DataHelper.getCurrentBalance();
         Assertions.assertEquals(expectedMoney, actualMoney);
@@ -54,8 +62,10 @@ public class TransferTest {
     @Test
     public void shouldNotTransferWhenNotEnoughMoney() throws Exception {
         int amount = DataHelper.getCurrentBalanceDonor() + 1;
+        String from = DataHelper.getDonorCardNumber().getNumber();
+        String to = DataHelper.getReceiverCardNumber().getNumber();
         int initialMoney = DataHelper.getCurrentBalance();
-        DataHelper.transferMoney(amount,Token);
+        DataHelper.transferMoney(amount, Token, from, to);
         int expectedMoney = initialMoney;
         int actualMoney = DataHelper.getCurrentBalance();
         Assertions.assertEquals(expectedMoney, actualMoney);

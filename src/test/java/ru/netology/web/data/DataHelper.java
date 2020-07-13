@@ -35,6 +35,29 @@ public class DataHelper {
     }
 
     @Value
+    public static class AuthInfo {
+        private String login;
+        private String password;
+    }
+
+    public static AuthInfo getAuthInfo() {
+        return new AuthInfo("vasya", "qwerty123");
+    }
+
+    @Value
+    public static class Card {
+        private String number;
+    }
+
+    public static Card getReceiverCardNumber() {
+        return new Card("5559 0000 0000 0001");
+    }
+
+    public static Card getDonorCardNumber() {
+        return new Card("5559 0000 0000 0002");
+    }
+
+    @Value
     public static class VerificationCode {
         private String code;
     }
@@ -102,10 +125,10 @@ public class DataHelper {
         return 0;
     }
 
-    public static String codeRequest() throws SQLException {
+    public static String codeRequest(String login, String password) throws SQLException {
         JSONObject requestBody = new JSONObject();
-        requestBody.put("login", "vasya");
-        requestBody.put("password", "qwerty123");
+        requestBody.put("login", login);
+        requestBody.put("password", password);
 
         RequestSpecification request = given();
         request.header("Content-Type", "application/json");
@@ -116,10 +139,10 @@ public class DataHelper {
         return verificationCode;
     }
 
-    public static String tokenRequest() throws Exception {
-        String verificationCode = codeRequest();
+    public static String tokenRequest(String login, String password) throws Exception {
+        String verificationCode = codeRequest(login, password);
         JSONObject requestBody = new JSONObject();
-        requestBody.put("login", "vasya");
+        requestBody.put("login", login);
         requestBody.put("code", verificationCode);
 
         RequestSpecification request = given();
@@ -133,10 +156,10 @@ public class DataHelper {
         return token;
     }
 
-    public static void transferMoney(int amount, String token) throws Exception {
+    public static void transferMoney(int amount, String token, String from, String to) throws Exception {
         JSONObject requestBody = new JSONObject();
-        requestBody.put("from", "5559 0000 0000 0002");
-        requestBody.put("to", "5559 0000 0000 0001");
+        requestBody.put("from", from);
+        requestBody.put("to", to);
         requestBody.put("amount", String.valueOf(amount));
 
         RequestSpecification request = given();
